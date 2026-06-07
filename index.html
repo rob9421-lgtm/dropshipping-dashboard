@@ -8,7 +8,7 @@
   :root{
     --bg:#0b0f17; --panel:#141b27; --panel2:#1b2434; --line:#26303f;
     --txt:#e7edf5; --muted:#8a98ab; --green:#2ecc71; --red:#ff5d5d;
-    --gray:#6b7787; --accent:#4c8dff;
+    --gray:#6b7787; --accent:#4c8dff; --amber:#f5a623;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);
@@ -26,6 +26,11 @@
   .dot{width:9px;height:9px;border-radius:50%;background:var(--gray)}
   .dot.on{background:var(--green);box-shadow:0 0 0 0 rgba(46,204,113,.6);animation:pulse 2s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,204,113,.5)}70%{box-shadow:0 0 0 8px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+  /* tabs principales */
+  .tabs{display:flex;gap:4px;padding:10px 20px 0;border-bottom:1px solid var(--line)}
+  .tabs button{background:transparent;color:var(--muted);border:0;border-bottom:2px solid transparent;
+    padding:10px 16px;font-size:14px;cursor:pointer;font-weight:560}
+  .tabs button.active{color:var(--txt);border-bottom-color:var(--accent)}
   main{padding:20px;max-width:1100px;margin:0 auto}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
   .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
@@ -50,33 +55,75 @@
   footer{color:var(--muted);font-size:12px;text-align:center;padding:18px}
   .err{background:#3a1414;border:1px solid #5e2222;color:#ffb4b4;padding:10px 14px;
     border-radius:10px;margin-bottom:14px;font-size:13px;display:none}
+  [hidden]{display:none !important}
+  /* ---- Analyst ---- */
+  .arun{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .acard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .acard.winner{border:2px solid var(--accent)}
+  .ahead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .atitle{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+  .badge{font-size:11px;padding:3px 10px;border-radius:8px;font-weight:600}
+  .badge.win{background:rgba(76,141,255,.18);color:#9cc0ff}
+  .badge.activar{background:rgba(46,204,113,.16);color:#7ee2a8}
+  .badge.probar{background:rgba(245,166,35,.16);color:#f5c87a}
+  .badge.descartar{background:rgba(255,93,93,.16);color:#ff9d9d}
+  .ascore{font-size:20px;font-weight:680;color:var(--accent)}
+  .axes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 18px;font-size:13px}
+  .axes .ax{display:flex;justify-content:space-between;gap:8px}
+  .axes .ax span{color:var(--muted)}
+  .ficha{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;padding-top:10px;
+    border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .ficha b{color:var(--txt);font-weight:560}
+  .asummary{color:var(--muted);font-size:13px;margin:10px 0 0;line-height:1.5}
+  .arow{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:8px}
+  .arow .ascore{font-size:16px}
+  .arow .rmeta{display:flex;align-items:center;gap:14px}
+  .arow .rmeta .mm{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
 <header>
   <div>
-    <h1>📊 Dropshipping · Productos activos</h1>
+    <h1>📊 Dropshipping · Dashboard</h1>
     <div class="sub" id="updated">Conectando…</div>
   </div>
-  <div class="controls">
-    <div class="seg" id="seg">
-      <button data-w="today" class="active">Hoy</button>
-      <button data-w="7d">7 días</button>
-      <button data-w="30d">30 días</button>
-    </div>
-    <div class="live"><span class="dot" id="livedot"></span><span id="livetxt">offline</span></div>
-  </div>
+  <div class="live"><span class="dot" id="livedot"></span><span id="livetxt">offline</span></div>
 </header>
+
+<nav class="tabs" id="tabs">
+  <button data-t="ops" class="active">Operación</button>
+  <button data-t="analyst">Analyst</button>
+</nav>
+
 <main>
   <div class="err" id="err"></div>
-  <div class="kpis" id="kpis"></div>
-  <table>
-    <thead>
-      <tr><th>Producto</th><th>Unid.</th><th>Ingreso</th><th>Ads</th><th>ROAS</th><th>Margen neto</th></tr>
-    </thead>
-    <tbody id="rows"><tr><td colspan="6" class="empty">Cargando…</td></tr></tbody>
-  </table>
-  <footer>Se actualiza en tiempo real vía Supabase · margen neto = ingreso − COGS − ads</footer>
+
+  <!-- ===================== PESTAÑA OPERACIÓN ===================== -->
+  <section id="view-ops">
+    <div class="controls" style="margin-bottom:16px">
+      <div class="seg" id="seg">
+        <button data-w="today" class="active">Hoy</button>
+        <button data-w="7d">7 días</button>
+        <button data-w="30d">30 días</button>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <table>
+      <thead>
+        <tr><th>Producto</th><th>Unid.</th><th>Ingreso</th><th>Ads</th><th>ROAS</th><th>Margen neto</th></tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="6" class="empty">Cargando…</td></tr></tbody>
+    </table>
+    <footer>Se actualiza en tiempo real vía Supabase · margen neto = ingreso − COGS − ads</footer>
+  </section>
+
+  <!-- ===================== PESTAÑA ANALYST ===================== -->
+  <section id="view-analyst" hidden>
+    <p class="arun" id="arun">Cargando análisis…</p>
+    <div id="analyst-body"></div>
+    <footer>Análisis de producto nuevo · 5 productos Dropi por búsqueda · el informe completo queda local</footer>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -84,16 +131,16 @@
 <script>
 const COP = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CO');
 const cls = n => (Number(n)>0?'pos':(Number(n)<0?'neg':''));
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let WINDOW = 'today';
+let TAB = 'ops';
 let sb = null;
+let analystLoaded = false;
 
 function suffix(){ return WINDOW; }
+function fail(msg){ const e=document.getElementById('err'); e.style.display='block'; e.textContent=msg; }
 
-function fail(msg){
-  const e = document.getElementById('err');
-  e.style.display='block'; e.textContent = msg;
-}
-
+/* ---------------- Operación ---------------- */
 function renderKpis(rows){
   let rev=0, spend=0, profit=0;
   rows.forEach(r=>{
@@ -112,7 +159,6 @@ function renderKpis(rows){
   document.getElementById('kpis').innerHTML = k.map(([l,v,c])=>
     `<div class="kpi"><div class="label">${l}</div><div class="val ${c}">${v}</div></div>`).join('');
 }
-
 function renderRows(rows){
   const tb = document.getElementById('rows');
   if(!rows.length){ tb.innerHTML='<tr><td colspan="6" class="empty">No hay productos activos. Marca productos con is_active=true.</td></tr>'; return; }
@@ -121,34 +167,98 @@ function renderRows(rows){
     const rev=r['revenue_'+suffix()], sp=r['ad_spend_'+suffix()], pf=r['net_profit_'+suffix()];
     const ro=r['roas_'+suffix()], un=r['units_'+suffix()];
     const h = r.health_today||'gray';
-    return `<tr><td><div class="name"><span class="sdot ${h}"></span>${r.name||'—'}</div></td>
+    return `<tr><td><div class="name"><span class="sdot ${h}"></span>${esc(r.name)||'—'}</div></td>
       <td>${Number(un)||0}</td><td>${COP(rev)}</td><td>${COP(sp)}</td>
       <td>${Number(ro)||0}</td><td class="${cls(pf)}">${COP(pf)}</td></tr>`;
   }).join('');
 }
-
-async function load(flash){
+async function loadOps(flash){
   if(!sb) return;
   const { data, error } = await sb.from('v_active_product_metrics').select('*');
   if(error){ fail('Error leyendo métricas: '+error.message); return; }
   document.getElementById('err').style.display='none';
   renderKpis(data||[]); renderRows(data||[]);
-  document.getElementById('updated').textContent =
-    'Actualizado ' + new Date().toLocaleTimeString('es-CO');
+  document.getElementById('updated').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-CO');
   if(flash){ document.querySelectorAll('#rows tr').forEach(tr=>{tr.classList.remove('flash');void tr.offsetWidth;tr.classList.add('flash');}); }
 }
 
+/* ---------------- Analyst ---------------- */
+function axesHtml(r){
+  const ax = [
+    ['Demanda', r.score_demand, 20],
+    ['Margen', r.score_margin, 20],
+    ['Saturación', r.score_saturation, 15],
+    ['Logíst./COD', r.score_logistics, 15],
+    ['Escala ads', r.score_scalability, 20],
+    ['Riesgo', r.score_risk, 10],
+  ];
+  return `<div class="axes">${ax.map(([l,v,max])=>
+    `<div class="ax"><span>${l}</span><b>${v==null?'—':v+'/'+max}</b></div>`).join('')}</div>`;
+}
+function fichaHtml(r){
+  const cod = r.cod_effectiveness==null?'—':Math.round(r.cod_effectiveness)+'%';
+  const be = r.roas_breakeven==null?'—':Number(r.roas_breakeven).toFixed(1);
+  return `<div class="ficha">
+    <span>COGS <b>${COP(r.cost)}</b></span>
+    <span>Precio <b>${COP(r.price)}</b></span>
+    <span>Margen/orden <b>${COP(r.margin_per_delivered)}</b></span>
+    <span>ROAS BE <b>${be}</b></span>
+    <span>Efectiv. COD <b>${cod}</b></span>
+  </div>`;
+}
+function winnerCard(r){
+  return `<div class="acard winner">
+    <div class="ahead">
+      <div class="atitle"><span class="badge win">Ganador</span>${esc(r.name)}</div>
+      <div class="ascore">${Number(r.score_total)||0}</div>
+    </div>
+    ${axesHtml(r)}
+    ${fichaHtml(r)}
+    ${r.summary?`<p class="asummary">${esc(r.summary)}</p>`:''}
+  </div>`;
+}
+function listRow(r){
+  const v = (r.verdict||'').toLowerCase();
+  const vb = ['activar','probar','descartar'].includes(v) ? `<span class="badge ${v}">${v}</span>` : '';
+  return `<div class="arow">
+    <div class="atitle" style="font-size:14px">${esc(r.name)} ${vb}</div>
+    <div class="rmeta">
+      <span class="mm">margen ${COP(r.margin_per_delivered)}</span>
+      <span class="ascore">${Number(r.score_total)||0}</span>
+    </div>
+  </div>`;
+}
+async function loadAnalyst(){
+  if(!sb) return;
+  const body = document.getElementById('analyst-body');
+  const arun = document.getElementById('arun');
+  const { data, error } = await sb.from('v_latest_analyst_report').select('*');
+  if(error){ arun.textContent=''; body.innerHTML=`<div class="empty">Error leyendo análisis: ${esc(error.message)}</div>`; return; }
+  analystLoaded = true;
+  const rows = data||[];
+  if(!rows.length){
+    arun.textContent='';
+    body.innerHTML='<div class="empty">Sin análisis aún.<br>Corre una búsqueda de productos nuevos para ver el veredicto del Analyst.</div>';
+    return;
+  }
+  const winner = rows.find(r=>r.is_winner) || rows[0];
+  const others = rows.filter(r=>r!==winner);
+  const d = winner.run_date ? new Date(winner.run_date+'T00:00:00').toLocaleDateString('es-CO') : '';
+  arun.textContent = `Último análisis · ${rows.length} productos · ${d}`;
+  body.innerHTML = winnerCard(winner) + others.map(listRow).join('');
+}
+
+/* ---------------- común ---------------- */
 function setLive(on){
   document.getElementById('livedot').classList.toggle('on', on);
   document.getElementById('livetxt').textContent = on ? 'en vivo' : 'offline';
 }
-
 function initRealtime(){
-  // Las vistas no emiten cambios: escuchamos las tablas base y re-consultamos la vista.
-  const ch = sb.channel('reporting')
-    .on('postgres_changes',{event:'*',schema:'public',table:'orders'},        ()=>load(true))
-    .on('postgres_changes',{event:'*',schema:'public',table:'metrics_daily'}, ()=>load(true))
-    .on('postgres_changes',{event:'*',schema:'public',table:'daily_reports'}, ()=>load(true))
+  const ch = sb.channel('dashboard')
+    .on('postgres_changes',{event:'*',schema:'public',table:'orders'},          ()=>{ if(TAB==='ops') loadOps(true); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'metrics_daily'},   ()=>{ if(TAB==='ops') loadOps(true); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'daily_reports'},   ()=>{ if(TAB==='ops') loadOps(true); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'analyst_reports'}, ()=>{ loadAnalyst(); })
     .subscribe(s=> setLive(s==='SUBSCRIBED'));
   return ch;
 }
@@ -156,7 +266,15 @@ function initRealtime(){
 document.getElementById('seg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active'); WINDOW = b.dataset.w; load(false);
+  b.classList.add('active'); WINDOW = b.dataset.w; loadOps(false);
+});
+document.getElementById('tabs').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); TAB = b.dataset.t;
+  document.getElementById('view-ops').hidden     = (TAB!=='ops');
+  document.getElementById('view-analyst').hidden = (TAB!=='analyst');
+  if(TAB==='analyst' && !analystLoaded) loadAnalyst();
 });
 
 (function start(){
@@ -166,9 +284,9 @@ document.getElementById('seg').addEventListener('click', e=>{
   }
   sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY,
     { realtime:{ params:{ eventsPerSecond: 2 } } });
-  load(false);
+  loadOps(false);
   initRealtime();
-  setInterval(()=>load(false), 60000); // respaldo: refresco cada 60s
+  setInterval(()=>{ if(TAB==='ops') loadOps(false); else loadAnalyst(); }, 60000);
 })();
 </script>
 </body>
