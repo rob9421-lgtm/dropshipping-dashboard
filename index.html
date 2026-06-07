@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dropshipping · Dashboard en tiempo real</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#141b27; --panel2:#1b2434; --line:#26303f;
+    --txt:#e7edf5; --muted:#8a98ab; --green:#2ecc71; --red:#ff5d5d;
+    --gray:#6b7787; --accent:#4c8dff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:12px;margin-top:2px}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{background:transparent;color:var(--muted);border:0;padding:8px 14px;
+    font-size:13px;cursor:pointer}
+  .seg button.active{background:var(--accent);color:#fff}
+  .live{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray)}
+  .dot.on{background:var(--green);box-shadow:0 0 0 0 rgba(46,204,113,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,204,113,.5)}70%{box-shadow:0 0 0 8px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+  main{padding:20px;max-width:1100px;margin:0 auto}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  .kpi .val{font-size:24px;font-weight:680;margin-top:6px}
+  .kpi .val.pos{color:var(--green)} .kpi .val.neg{color:var(--red)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  th,td{padding:12px 14px;text-align:right;font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  thead th{background:var(--panel2);color:var(--muted);font-size:12px;
+    text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+  tbody tr{border-top:1px solid var(--line)}
+  tbody tr:hover{background:#172033}
+  .name{display:flex;align-items:center;gap:10px;font-weight:560}
+  .sdot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .sdot.green{background:var(--green)} .sdot.red{background:var(--red)} .sdot.gray{background:var(--gray)}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  .flash{animation:flash 1.1s ease}
+  @keyframes flash{0%{background:rgba(76,141,255,.28)}100%{background:transparent}}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:18px}
+  .err{background:#3a1414;border:1px solid #5e2222;color:#ffb4b4;padding:10px 14px;
+    border-radius:10px;margin-bottom:14px;font-size:13px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>📊 Dropshipping · Productos activos</h1>
+    <div class="sub" id="updated">Conectando…</div>
+  </div>
+  <div class="controls">
+    <div class="seg" id="seg">
+      <button data-w="today" class="active">Hoy</button>
+      <button data-w="7d">7 días</button>
+      <button data-w="30d">30 días</button>
+    </div>
+    <div class="live"><span class="dot" id="livedot"></span><span id="livetxt">offline</span></div>
+  </div>
+</header>
+<main>
+  <div class="err" id="err"></div>
+  <div class="kpis" id="kpis"></div>
+  <table>
+    <thead>
+      <tr><th>Producto</th><th>Unid.</th><th>Ingreso</th><th>Ads</th><th>ROAS</th><th>Margen neto</th></tr>
+    </thead>
+    <tbody id="rows"><tr><td colspan="6" class="empty">Cargando…</td></tr></tbody>
+  </table>
+  <footer>Se actualiza en tiempo real vía Supabase · margen neto = ingreso − COGS − ads</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<script>
+const COP = n => '$' + Math.round(Number(n)||0).toLocaleString('es-CO');
+const cls = n => (Number(n)>0?'pos':(Number(n)<0?'neg':''));
+let WINDOW = 'today';
+let sb = null;
+
+function suffix(){ return WINDOW; }
+
+function fail(msg){
+  const e = document.getElementById('err');
+  e.style.display='block'; e.textContent = msg;
+}
+
+function renderKpis(rows){
+  let rev=0, spend=0, profit=0;
+  rows.forEach(r=>{
+    rev += Number(r['revenue_'+suffix()])||0;
+    spend += Number(r['ad_spend_'+suffix()])||0;
+    profit += Number(r['net_profit_'+suffix()])||0;
+  });
+  const roas = spend>0 ? (rev/spend).toFixed(2) : '0.00';
+  const k = [
+    ['Productos activos', rows.length, ''],
+    ['Ingreso', COP(rev), ''],
+    ['Gasto ads', COP(spend), ''],
+    ['ROAS', roas, ''],
+    ['Margen neto', COP(profit), cls(profit)],
+  ];
+  document.getElementById('kpis').innerHTML = k.map(([l,v,c])=>
+    `<div class="kpi"><div class="label">${l}</div><div class="val ${c}">${v}</div></div>`).join('');
+}
+
+function renderRows(rows){
+  const tb = document.getElementById('rows');
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="6" class="empty">No hay productos activos. Marca productos con is_active=true.</td></tr>'; return; }
+  rows.sort((a,b)=> (Number(b['net_profit_'+suffix()])||0)-(Number(a['net_profit_'+suffix()])||0));
+  tb.innerHTML = rows.map(r=>{
+    const rev=r['revenue_'+suffix()], sp=r['ad_spend_'+suffix()], pf=r['net_profit_'+suffix()];
+    const ro=r['roas_'+suffix()], un=r['units_'+suffix()];
+    const h = r.health_today||'gray';
+    return `<tr><td><div class="name"><span class="sdot ${h}"></span>${r.name||'—'}</div></td>
+      <td>${Number(un)||0}</td><td>${COP(rev)}</td><td>${COP(sp)}</td>
+      <td>${Number(ro)||0}</td><td class="${cls(pf)}">${COP(pf)}</td></tr>`;
+  }).join('');
+}
+
+async function load(flash){
+  if(!sb) return;
+  const { data, error } = await sb.from('v_active_product_metrics').select('*');
+  if(error){ fail('Error leyendo métricas: '+error.message); return; }
+  document.getElementById('err').style.display='none';
+  renderKpis(data||[]); renderRows(data||[]);
+  document.getElementById('updated').textContent =
+    'Actualizado ' + new Date().toLocaleTimeString('es-CO');
+  if(flash){ document.querySelectorAll('#rows tr').forEach(tr=>{tr.classList.remove('flash');void tr.offsetWidth;tr.classList.add('flash');}); }
+}
+
+function setLive(on){
+  document.getElementById('livedot').classList.toggle('on', on);
+  document.getElementById('livetxt').textContent = on ? 'en vivo' : 'offline';
+}
+
+function initRealtime(){
+  // Las vistas no emiten cambios: escuchamos las tablas base y re-consultamos la vista.
+  const ch = sb.channel('reporting')
+    .on('postgres_changes',{event:'*',schema:'public',table:'orders'},        ()=>load(true))
+    .on('postgres_changes',{event:'*',schema:'public',table:'metrics_daily'}, ()=>load(true))
+    .on('postgres_changes',{event:'*',schema:'public',table:'daily_reports'}, ()=>load(true))
+    .subscribe(s=> setLive(s==='SUBSCRIBED'));
+  return ch;
+}
+
+document.getElementById('seg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); WINDOW = b.dataset.w; load(false);
+});
+
+(function start(){
+  if(typeof CONFIG==='undefined' || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY){
+    fail('Falta config.js (SUPABASE_URL / SUPABASE_ANON_KEY). Copia config.example.js → config.js.');
+    return;
+  }
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY,
+    { realtime:{ params:{ eventsPerSecond: 2 } } });
+  load(false);
+  initRealtime();
+  setInterval(()=>load(false), 60000); // respaldo: refresco cada 60s
+})();
+</script>
+</body>
+</html>
